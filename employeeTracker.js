@@ -82,10 +82,23 @@ function endConnection() {
   connection.end();
 }
 
+// why didnt this work either :(((
 function addDept() {
   inquirer.prompt({
     name: "newDept",
     type: "input",
-    message: "Please enter a name for the new department"
+    message: "Please enter a name for the new department."
+  }).then(function(answer) {
+    connection.query(
+      "INSERT INTO department SET ?",
+      {
+        name: answer.newDept,
+      },
+      function(err) {
+        if (err) throw err;
+        console.log("Your new department was created successfully!");
+        init();
+      }
+    );
   });
 }
