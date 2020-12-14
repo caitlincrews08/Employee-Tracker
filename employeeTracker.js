@@ -1,6 +1,7 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
+const { identity } = require("rxjs");
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -17,7 +18,7 @@ var connection = mysql.createConnection({
 });
 
 // establishes connection to server
-connection.connect(function(err) {
+connection.connect(function (err) {
   if (err) throw err;
   console.log("connected as id " + connection.threadId + "\n");
   init();
@@ -39,8 +40,8 @@ function init() {
       "Update employee roles",
       "Nothing"
     ]
-  }).then(function(res) {
-    switch (res.action) {
+  }).then(function (res) {
+    switch (res.start) {
       case "Add a department":
         addDept();
         break;
@@ -52,7 +53,7 @@ function init() {
       case "Add an employee":
         addEmp();
         break;
-        
+
       case "View departments":
         viewDept();
         break;
@@ -69,32 +70,27 @@ function init() {
         updateRole();
         break;
 
-      case "Nothing":
-        endConnection();
+      case "Exit":
+        console.log("thanks for using employee tracker!");
+        process.exit();
         break;
     }
   });
 }
 
-// why isnt this working??
-function endConnection() {
-  console.log("thanks for using employee tracker!")
-  connection.end();
-}
-
-// why didnt this work either :(((
+// function that creates a new department and inserts into db table
 function addDept() {
   inquirer.prompt({
     name: "newDept",
     type: "input",
     message: "Please enter a name for the new department."
-  }).then(function(answer) {
+  }).then(function (answer) {
     connection.query(
       "INSERT INTO department SET ?",
       {
         name: answer.newDept,
       },
-      function(err) {
+      function (err) {
         if (err) throw err;
         console.log("Your new department was created successfully!");
         init();
@@ -102,3 +98,64 @@ function addDept() {
     );
   });
 }
+
+
+// function runs when user selects add role from array
+function addRole() {
+  // captures department choices from db and corresponding IDs
+  let deptChoices = [];
+  let deptID = {};
+
+  availableDepts();
+
+  const questions = [
+    {
+      name: "title",
+      type: "input",
+      message: "What is the title of the new role?"
+    },
+    {
+      name: "salary",
+      type: "input",
+      message: "What is the salary of this position?"
+    },
+    {
+      name: "dept",
+      type: "list",
+      message: "What department does this position belong to?",
+      choices: deptChoices
+    }
+  ] 
+
+  // gets list of departments from database
+  function availableDepts() {
+    let sql = "SELECT * FROM department";
+    connection.query(sql, async function (err, res) {
+      if (err) throw err;
+      for (let i = 0; i < res.length; i++) {
+        // push department 'name' response from db to deptChoices array
+        deptChoices.push(res[i].name);
+        // finds corresponding ID from db and sets it as 'deptID'
+        deptID[res[i].name] = res[i].id;
+      }
+      return deptChoices;
+    });
+  }
+
+ 
+  inquirer.prompt(questions).then(function(answer) {
+    connection.query(
+      "INSERT INTO role SET ?",
+      {
+        title: answer.title,
+        salary: answer.salary,
+        department_id: deptID[answer.dept]
+      },
+      function (err) {
+        if (err) throw err;
+        console.log("Your new role was added successfully!");
+        init();
+      }
+    );
+  });
+};
