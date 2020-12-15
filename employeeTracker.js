@@ -1,7 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
-const { identity } = require("rxjs");
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -38,7 +37,7 @@ function init() {
       "View roles",
       "View employees",
       "Update employee roles",
-      "Nothing"
+      "Exit"
     ]
   }).then(function (res) {
     switch (res.start) {
@@ -127,21 +126,20 @@ function addRole() {
     }
   ] 
 
-  // gets list of departments from database
-  function availableDepts() {
-    let sql = "SELECT * FROM department";
-    connection.query(sql, async function (err, res) {
-      if (err) throw err;
-      for (let i = 0; i < res.length; i++) {
-        // push department 'name' response from db to deptChoices array
-        deptChoices.push(res[i].name);
-        // finds corresponding ID from db and sets it as 'deptID'
-        deptID[res[i].name] = res[i].id;
-      }
-      return deptChoices;
-    });
-  }
-
+  // gets array of departments from database
+ function availableDepts() {
+  let sql = "SELECT * FROM department";
+  connection.query(sql, async function (err, res) {
+    if (err) throw err;
+    for (let i = 0; i < res.length; i++) {
+      // push department 'name' response from db to deptChoices array
+      deptChoices.push(res[i].name);
+      // finds corresponding ID from db and sets it as 'deptID'
+      deptID[res[i].name] = res[i].id;
+    }
+    return deptChoices;
+  });
+}
  
   inquirer.prompt(questions).then(function(answer) {
     connection.query(
@@ -154,6 +152,90 @@ function addRole() {
       function (err) {
         if (err) throw err;
         console.log("Your new role was added successfully!");
+        init();
+      }
+    );
+  });
+};
+
+// function runs when user selects add employee
+function addEmp() {
+  // holds role options available from db
+  let roleChoices = [];
+  let roleID = {};
+  // holds manager options available from db
+  let managerChoices = ["None"];
+  let managerID = {};
+
+  availableRoles();
+  availableManagers();
+
+  const questions = [
+    {
+      name: "firstName",
+      type: "input",
+      message: "Please enter the employee's first name."
+    },
+    {
+      name: "lastName",
+      type: "input",
+      message: "Please enter the employee's last name."
+    },
+    {
+      name: "role",
+      type: "list",
+      message: "What is this employee's role?",
+      choices: roleChoices
+    },
+    {
+      name: "manager",
+      type: "list",
+      message: "Select this employee's manager.",
+      choices: managerChoices
+
+    }
+  ]
+
+  function availableRoles() {
+    let sql = "SELECT * FROM role";
+    connection.query(sql, function (err, res) {
+      if (err) throw err;
+      for (let i = 0; i < res.length; i++) {
+        // push role 'title' response from db to roleChoices array
+        roleChoices.push(res[i].title);
+        // finds corresponding ID from db and sets it as 'roleID'
+        roleID[res[i].title] = res[i].id;
+      }
+      return roleChoices;
+    });
+  }
+
+  function availableManagers() {
+    let sql = "SELECT * FROM employee";
+    connection.query(sql, function(err, res) {
+      if (err) throw err;
+      for (let i = 0; i < res.length; i++) {
+        // push first and last name of employees in db to managerChoices array
+        managerChoices.push(res[i].first_name + ' ' + res[i].last_name)
+        // this should set the manager id = to 
+        managerID[res[i].first_name + ' ' + res[i].last_name] = res[i].id;
+      };
+      return managerChoices;
+    })
+  }
+
+  inquirer.prompt(questions).then(function(answer) {
+    connection.query(
+      "INSERT INTO employee SET ?",
+      {
+        first_name: answer.firstName,
+        last_name: answer.lastName,
+        role_id: roleID[answer.role],
+        manager_id: managerID[answer.manager]
+      },
+      function (err) {
+        if (err) throw err;
+        console.log("Your new employee was added successfully!");
         init();
       }
     );
