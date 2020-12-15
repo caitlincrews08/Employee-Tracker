@@ -217,7 +217,7 @@ function addEmp() {
       for (let i = 0; i < res.length; i++) {
         // push first and last name of employees in db to managerChoices array
         managerChoices.push(res[i].first_name + ' ' + res[i].last_name)
-        // this should set the manager id = to 
+        // this sets the managerID = the id of the matching employee in the database
         managerID[res[i].first_name + ' ' + res[i].last_name] = res[i].id;
       };
       return managerChoices;
